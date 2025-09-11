@@ -114,12 +114,21 @@
                         {{-- TallStack UI v2 select — options emitted as JSON to avoid null/undefined --}}
 
 
-<x-ts-select.styled
-    label="Smoking Status"
-    placeholder="Select status"
-    wire:model.defer="smoking_status"
-    :options="\Illuminate\Support\Js::from($smokingOptions ?? [])"
-/>
+
+<div>
+    <label class="block text-sm font-medium text-slate-700 mb-1">Smoking Status</label>
+    <select
+        wire:model.defer="smoking_status"
+        class="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+    >
+        <option value="">Select status</option>
+        <option value="never">Never</option>
+        <option value="former">Former</option>
+        <option value="current">Current</option>
+    </select>
+    @error('smoking_status') <x-ts-error :message="$message" /> @enderror
+</div>
+
 
 
                         @error('smoking_status') <x-ts-error :message="$message" /> @enderror
