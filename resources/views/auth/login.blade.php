@@ -4,7 +4,7 @@
             <div class="flex flex-col items-center">
                 <x-authentication-card-logo class="h-20 w-auto" />
                 <h1 class="mt-4 text-center text-2xl font-bold text-gray-800 dark:text-gray-200">
-                    Patient Discharge Portal
+                    Referral Portal
                 </h1>
             </div>
         </x-slot>

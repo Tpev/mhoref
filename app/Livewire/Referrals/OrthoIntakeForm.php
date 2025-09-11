@@ -7,8 +7,10 @@ use App\Models\ReferralIntake;
 use Illuminate\Support\Str;
 use App\Models\Referral;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Carbon\Carbon;
 
 class OrthoIntakeForm extends Component
 {
@@ -52,6 +54,12 @@ class OrthoIntakeForm extends Component
     /** @var array<array{label:string,value:string}> */
     public array $smokingOptions = [];
 
+    // === OCR Prefill (Step 1) ===
+    /** @var \Livewire\Features\SupportFileUploads\TemporaryUploadedFile|null */
+    public $ocr_pdf = null; // PDF to send to OCR API
+    public ?string $ocr_error = null; // display API error if any
+    public array $ocr_last_response = []; // optional debug/preview
+
     public function mount(): void
     {
         // Initialize select options to avoid null/undefined in TallStackUI
@@ -70,6 +78,8 @@ class OrthoIntakeForm extends Component
             'last_name'           => 'required|string|max:100',
             'dob'                 => 'required|date',
             'phone'               => 'required|string|max:30',
+            // OCR PDF (optional)
+            'ocr_pdf'             => 'nullable|file|mimes:pdf|max:20480', // 20 MB
 
             // step 2
             'pcp_first_name'      => 'required|string|max:100',
@@ -116,7 +126,7 @@ class OrthoIntakeForm extends Component
 
         $rules = array_intersect_key($this->rules(), array_flip($fields));
 
-        // Conditional requirements on this step only
+        // Conditional requirement on step 4
         if ($this->step === 4 && $this->prior_joint_surgery === 'yes') {
             $rules['surgery_report'] = 'required|file|mimes:pdf,jpg,jpeg,png|mimetypes:application/pdf,image/jpeg,image/png|max:20480';
         }
@@ -133,6 +143,110 @@ class OrthoIntakeForm extends Component
     public function prevStep(): void
     {
         if ($this->step > 1) $this->step--;
+    }
+
+    /**
+     * OCR prefill using local API (defaults to http://127.0.0.1:8009/extract).
+     * Populates $first_name, $last_name, $dob if good candidates found.
+     */
+    public function ocrPrefill(): void
+    {
+        $this->reset('ocr_error');
+        // Validate only the uploaded OCR file; it's optional overall
+        $this->validateOnly('ocr_pdf');
+
+        if (!$this->ocr_pdf) {
+            $this->ocr_error = 'Please choose a PDF first.';
+            $this->dispatch('ts-toast', title: 'OCR', description: $this->ocr_error, icon: 'warning');
+            return;
+        }
+
+        try {
+            $base = config('services.ocr.base_url') ?? env('OCR_BASE_URL', 'http://127.0.0.1:8009');
+            $url  = rtrim($base, '/').'/extract';
+
+            $response = Http::timeout(90)
+                ->acceptJson()
+                ->attach('file', fopen($this->ocr_pdf->getRealPath(), 'r'), $this->ocr_pdf->getClientOriginalName())
+                ->post($url, [
+                    // include a template if your API expects it; otherwise omit
+                    // 'template' => 'Athena',
+                ]);
+
+            if ($response->failed()) {
+                $msg = $response->json('detail') ?? $response->body();
+                throw new \RuntimeException('API error: ' . $msg);
+            }
+
+            $json = $response->json() ?? [];
+            $this->ocr_last_response = $json;
+
+            // Pick the best person & DOB
+            $bestPerson = $this->pickBestPerson($json['people'] ?? []);
+            $bestDob    = $this->pickBestDob($json['dobs'] ?? []);
+
+            if ($bestPerson) {
+                $this->first_name = trim((string)($bestPerson['first_name'] ?? $this->first_name));
+                $this->last_name  = trim((string)($bestPerson['last_name']  ?? $this->last_name));
+            }
+            if ($bestDob && !empty($bestDob['date'])) {
+                $norm = $this->normalizeDob((string)$bestDob['date']);
+                if ($norm) {
+                    $this->dob = $norm; // Y-m-d
+                }
+            }
+
+            $this->dispatch('ts-toast', title: 'OCR Prefill', description: 'Fields updated from PDF.', icon: 'success');
+
+        } catch (\Throwable $e) {
+            $this->ocr_error = $e->getMessage();
+            $this->dispatch('ts-toast', title: 'OCR Prefill', description: $this->ocr_error, icon: 'danger');
+        }
+    }
+
+    /** @param array<int, array<string,mixed>> $people */
+    protected function pickBestPerson(array $people): ?array
+    {
+        if (empty($people)) return null;
+        // Sort by confidence desc, take first with both first/last present
+        usort($people, fn($a,$b) => ($b['confidence'] ?? 0) <=> ($a['confidence'] ?? 0));
+        foreach ($people as $p) {
+            if (!empty($p['first_name']) && !empty($p['last_name'])) return $p;
+        }
+        return $people[0] ?? null;
+    }
+
+    /** @param array<int, array<string,mixed>> $dobs */
+    protected function pickBestDob(array $dobs): ?array
+    {
+        if (empty($dobs)) return null;
+        usort($dobs, fn($a,$b) => ($b['confidence'] ?? 0) <=> ($a['confidence'] ?? 0));
+        return $dobs[0] ?? null;
+    }
+
+    /** Normalize API DOB strings to Y-m-d if possible. */
+    protected function normalizeDob(?string $raw): ?string
+    {
+        if (!$raw) return null;
+        $raw = trim($raw);
+
+        // Try common formats
+        $formats = ['Y-m-d', 'm/d/Y', 'm-d-Y', 'd/m/Y', 'd-m-Y', 'M d, Y', 'F d, Y'];
+        foreach ($formats as $fmt) {
+            try {
+                $c = Carbon::createFromFormat($fmt, $raw);
+                if ($c) return $c->format('Y-m-d');
+            } catch (\Throwable) {
+                // keep trying
+            }
+        }
+
+        // Last resort: strtotime
+        $ts = strtotime($raw);
+        if ($ts !== false) {
+            return date('Y-m-d', $ts);
+        }
+        return null;
     }
 
     public function submit(): void

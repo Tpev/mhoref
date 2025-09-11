@@ -43,8 +43,47 @@
 
         {{-- ================== STEP 1: PATIENT ================== --}}
         @if($step === 1)
-            <section class="space-y-4">
+            <section class="space-y-5">
                 <h2 class="text-lg font-semibold">Patient Information</h2>
+
+                {{-- OCR Prefill (PDF -> First/Last/DOB) --}}
+                <div class="rounded-lg border p-4 bg-slate-50/50">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="font-medium">Prefill from PDF (local OCR)</div>
+                        @if($ocr_error)
+                            <x-ts-badge color="danger">OCR error</x-ts-badge>
+                        @endif
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Referral PDF</label>
+                            <input type="file" accept="application/pdf" wire:model="ocr_pdf"
+                                   class="block w-full text-sm file:mr-3 file:px-4 file:py-2 file:rounded file:border-0 file:bg-slate-100 file:text-slate-700 border rounded p-2"
+                            />
+                            @error('ocr_pdf') <x-ts-alert color="danger" class="mt-2">{{ $message }}</x-ts-alert> @enderror
+                            @if($ocr_pdf)
+                                <p class="text-xs text-slate-500 mt-1">Selected: {{ $ocr_pdf->getClientOriginalName() }}</p>
+                            @endif
+                        </div>
+                        <div class="md:col-span-1 flex items-end">
+                            <x-ts-button wire:click="ocrPrefill" icon="sparkles" class="w-full" wire:loading.attr="disabled">
+                                Run OCR Prefill
+                            </x-ts-button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3 mt-3">
+                        <span wire:loading wire:target="ocrPrefill,ocr_pdf" class="text-sm text-slate-500">
+                            Processing PDF with OCR…
+                        </span>
+                        @if($ocr_error)
+                            <x-ts-alert color="danger" class="mt-2 w-full">{{ $ocr_error }}</x-ts-alert>
+                        @endif
+                    </div>
+                </div>
+
+                {{-- Manual fields (will be overridden if OCR fills them) --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <x-ts-input label="First Name" wire:model.defer="first_name" placeholder="Jane" />
@@ -110,29 +149,22 @@
                         />
                         @error('diag_for_referral') <x-ts-error :message="$message" /> @enderror
                     </div>
+
+                    {{-- Simple native select (robust) --}}
                     <div>
-                        {{-- TallStack UI v2 select — options emitted as JSON to avoid null/undefined --}}
-
-
-
-<div>
-    <label class="block text-sm font-medium text-slate-700 mb-1">Smoking Status</label>
-    <select
-        wire:model.defer="smoking_status"
-        class="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-    >
-        <option value="">Select status</option>
-        <option value="never">Never</option>
-        <option value="former">Former</option>
-        <option value="current">Current</option>
-    </select>
-    @error('smoking_status') <x-ts-error :message="$message" /> @enderror
-</div>
-
-
-
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Smoking Status</label>
+                        <select
+                            wire:model.defer="smoking_status"
+                            class="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        >
+                            <option value="">Select status</option>
+                            <option value="never">Never</option>
+                            <option value="former">Former</option>
+                            <option value="current">Current</option>
+                        </select>
                         @error('smoking_status') <x-ts-error :message="$message" /> @enderror
                     </div>
+
                     <div>
                         <x-ts-input
                             type="number" step="0.1" min="5" max="80"

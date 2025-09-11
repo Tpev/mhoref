@@ -43,23 +43,23 @@ class UserSeeder extends Seeder
             ],
             // 3) Liz Arcaro
             [
-                'email'    => 'Liz.Arcaro@mainehealth.org',
-                'name'     => 'Liz Arcaro',
-                'password' => Hash::make('liz.arcaro.demo!'),
+                'email'    => 'Julie.Evans@mainehealth.org',
+                'name'     => 'Julie Evans',
+                'password' => Hash::make('Julie.Evans.demo!'),
                 'group'    => $commonGroups,
             ],
             // 4) Susan Whitney
             [
-                'email'    => 'Susan.Whitney@mainehealth.org',
-                'name'     => 'Susan Whitney',
-                'password' => Hash::make('susan.whitney.demo!'),
+                'email'    => 'Sophia.Bazzini@mainehealth.org',
+                'name'     => 'Sophia Bazzini',
+                'password' => Hash::make('Sophia.Bazzini.demo!'),
                 'group'    => $commonGroups,
             ],
             // 5) E Brondolo
             [
-                'email'    => 'e.brondolo@northeastern.edu',
-                'name'     => 'E Brondolo',
-                'password' => Hash::make('e.brondolo.demo!'),
+                'email'    => 'Christopher.sawyer@mainehealth.org',
+                'name'     => 'Christopher sawyer',
+                'password' => Hash::make('Christopher.Sawyer.demo!'),
                 'group'    => $commonGroups,
             ],
             // 6) T Peverelli
