@@ -1,12 +1,12 @@
 <div class="flex justify-end mb-4">
-    <button wire:click="create" class="btn-create-referral">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+    <a href="{{ url('/referrals/ortho-intake') }}" class="btn-create-referral">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
             <path fill-rule="evenodd"
                   d="M12 4.5a.75.75 0 01.75.75v6h6a.75.75 0 010 1.5h-6v6a.75.75 0 01-1.5 0v-6h-6a.75.75 0 010-1h6v-6A.75.75 0 0112 4.5z"
                   clip-rule="evenodd" />
         </svg>
         Create Referral
-    </button>
+    </a>
 <style>
     .btn-create-referral {
         display: inline-flex;
@@ -21,6 +21,7 @@
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         border: none;
+        text-decoration: none;
     }
 
     .btn-create-referral:hover {
@@ -38,7 +39,7 @@
         height: 1rem;
         fill: currentColor;
     }
-</style>	
-</div>
+</style>
 
+</div>
 

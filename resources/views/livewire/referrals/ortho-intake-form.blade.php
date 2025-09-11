@@ -26,7 +26,7 @@
             <span>•</span>
             <span class="{{ $step>=3 ? 'text-indigo-600 font-medium' : '' }}">Clinical</span>
             <span>•</span>
-            <span class="{{ $step>=4 ? 'text-indigo-600 font-medium' : '' }}">X‑Rays & Surgery</span>
+            <span class="{{ $step>=4 ? 'text-indigo-600 font-medium' : '' }}">X-Rays & Surgery</span>
             <span>•</span>
             <span class="{{ $step>=5 ? 'text-indigo-600 font-medium' : '' }}">Review</span>
         </div>
@@ -111,17 +111,15 @@
                         @error('diag_for_referral') <x-ts-error :message="$message" /> @enderror
                     </div>
                     <div>
-                        {{-- TallStack UI v2 select --}}
-                        <x-ts-select.styled
-                            label="Smoking Status"
-                            placeholder="Select status"
-                            wire:model.defer="smoking_status"
-                            :options="[
-                                ['label' => 'Never',  'value' => 'never'],
-                                ['label' => 'Former', 'value' => 'former'],
-                                ['label' => 'Current','value' => 'current'],
-                            ]"
-                        />
+                        {{-- TallStack UI v2 select — options emitted as JSON to avoid null/undefined --}}
+
+					<x-ts-select.styled
+						label="Smoking Status"
+						placeholder="Select status"
+						wire:model.defer="smoking_status"
+						:options="$smokingOptions"
+					/>
+
                         @error('smoking_status') <x-ts-error :message="$message" /> @enderror
                     </div>
                     <div>
@@ -152,9 +150,9 @@
 
                 {{-- X-Rays upload --}}
                 <div class="space-y-3">
-                    <h2 class="text-lg font-semibold">X‑Ray(s) — Upload Documents</h2>
+                    <h2 class="text-lg font-semibold">X-Ray(s) — Upload Documents</h2>
                     <x-ts-upload
-                        label="Attach X‑Ray files (PDF/JPG/PNG — up to 10)"
+                        label="Attach X-Ray files (PDF/JPG/PNG — up to 10)"
                         wire:model="xrays"
                         multiple
                         hint="You can drag & drop multiple files."
@@ -256,10 +254,10 @@
                     </x-ts-card>
 
                     <x-ts-card class="p-4 md:col-span-2">
-                        <h3 class="font-semibold mb-2">X‑Rays & Surgery</h3>
+                        <h3 class="font-semibold mb-2">X-Rays & Surgery</h3>
                         <div class="text-sm space-y-2">
                             <div>
-                                <span class="font-medium">X‑Ray files:</span>
+                                <span class="font-medium">X-Ray files:</span>
                                 @if(!empty($xrays))
                                     <ul class="list-disc ml-5">
                                         @foreach($xrays as $file)

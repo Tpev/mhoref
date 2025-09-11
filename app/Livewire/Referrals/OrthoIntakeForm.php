@@ -13,8 +13,10 @@ use Livewire\WithFileUploads;
 class OrthoIntakeForm extends Component
 {
     use WithFileUploads;
-	public ?int $workflow_id = null;
+
+    public ?int $workflow_id = null;
     public ?int $workflow_step_id = null;
+
     // Wizard
     public int $step = 1;
     public int $totalSteps = 5;
@@ -46,6 +48,19 @@ class OrthoIntakeForm extends Component
     public string $implant_info = ''; // free text details
 
     public string $prior_joint_surgery = ''; // yes|no
+
+    /** @var array<array{label:string,value:string}> */
+    public array $smokingOptions = [];
+
+    public function mount(): void
+    {
+        // Initialize select options to avoid null/undefined in TallStackUI
+        $this->smokingOptions = [
+            ['label' => 'Never',  'value' => 'never'],
+            ['label' => 'Former', 'value' => 'former'],
+            ['label' => 'Current','value' => 'current'],
+        ];
+    }
 
     protected function rules(): array
     {
@@ -120,85 +135,82 @@ class OrthoIntakeForm extends Component
         if ($this->step > 1) $this->step--;
     }
 
-public function submit(): void
-{
-    $rules = $this->rules();
-    if ($this->prior_joint_surgery === 'yes') {
-        $rules['surgery_report'] = 'required|file|mimes:pdf,jpg,jpeg,png|mimetypes:application/pdf,image/jpeg,image/png|max:20480';
+    public function submit(): void
+    {
+        $rules = $this->rules();
+        if ($this->prior_joint_surgery === 'yes') {
+            $rules['surgery_report'] = 'required|file|mimes:pdf,jpg,jpeg,png|mimetypes:application/pdf,image/jpeg,image/png|max:20480';
+        }
+        $this->validate($rules);
+
+        DB::transaction(function () {
+            // Always attach to workflow_id = 1
+            $referral = Referral::create([
+                'workflow_id' => 1,
+                'status'      => 'new',
+            ]);
+
+            $intake = ReferralIntake::create([
+                'referral_id'         => $referral->id,
+                'workflow_id'         => 1,
+                'workflow_step_id'    => null,
+                'submitted_by'        => Auth::id(),
+                'submitted_at'        => now(),
+
+                'patient_first_name'  => $this->first_name,
+                'patient_last_name'   => $this->last_name,
+                'patient_dob'         => $this->dob,
+                'patient_phone'       => $this->phone,
+
+                'pcp_first_name'      => $this->pcp_first_name,
+                'pcp_last_name'       => $this->pcp_last_name,
+                'pcp_npi'             => $this->pcp_npi,
+
+                'last_visit_note'     => $this->last_visit_note,
+                'diag_for_referral'   => $this->diag_for_referral,
+                'smoking_status'      => $this->smoking_status,
+                'bmi'                 => $this->bmi,
+                'medication_list'     => $this->medication_list,
+
+                'prior_joint_surgery' => $this->prior_joint_surgery === 'yes',
+                'implant_info'        => $this->implant_info ?: null,
+            ]);
+
+            // === file storage ===
+            $base = "referrals/intakes/{$intake->id}";
+            $xrayMeta = [];
+            foreach ($this->xrays ?? [] as $file) {
+                $ext  = $file->getClientOriginalExtension();
+                $name = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+                $slug = Str::slug(substr($name, 0, 100));
+                $storedPath = $file->storeAs("$base/xrays", "{$slug}-".Str::random(8).".$ext", 'public');
+
+                $xrayMeta[] = [
+                    'path'       => $storedPath,
+                    'url'        => asset("storage/$storedPath"),
+                    'original'   => $file->getClientOriginalName(),
+                    'mime'       => $file->getMimeType(),
+                    'size_bytes' => $file->getSize(),
+                ];
+            }
+
+            $surgeryPath = null;
+            if ($this->prior_joint_surgery === 'yes' && $this->surgery_report) {
+                $ext  = $this->surgery_report->getClientOriginalExtension();
+                $name = pathinfo($this->surgery_report->getClientOriginalName(), PATHINFO_FILENAME);
+                $slug = Str::slug(substr($name, 0, 100));
+                $surgeryPath = $this->surgery_report->storeAs("$base/surgery", "{$slug}-".Str::random(8).".$ext", 'public');
+            }
+
+            $intake->update([
+                'xray_files'          => $xrayMeta,
+                'surgery_report_path' => $surgeryPath,
+            ]);
+        });
+
+        $this->submitted = true;
+        $this->step = $this->totalSteps;
     }
-    $this->validate($rules);
-
-    DB::transaction(function () {
-        // Always attach to workflow_id = 1
-        $referral = \App\Models\Referral::create([
-            'workflow_id' => 1,
-            'status'      => 'new',
-        ]);
-
-        $intake = \App\Models\ReferralIntake::create([
-            'referral_id'         => $referral->id,
-            'workflow_id'         => 1,
-            'workflow_step_id'    => null, // or hardcode a step id if needed
-            'submitted_by'        => \Illuminate\Support\Facades\Auth::id(),
-            'submitted_at'        => now(),
-
-            'patient_first_name'  => $this->first_name,
-            'patient_last_name'   => $this->last_name,
-            'patient_dob'         => $this->dob,
-            'patient_phone'       => $this->phone,
-
-            'pcp_first_name'      => $this->pcp_first_name,
-            'pcp_last_name'       => $this->pcp_last_name,
-            'pcp_npi'             => $this->pcp_npi,
-
-            'last_visit_note'     => $this->last_visit_note,
-            'diag_for_referral'   => $this->diag_for_referral,
-            'smoking_status'      => $this->smoking_status,
-            'bmi'                 => $this->bmi,
-            'medication_list'     => $this->medication_list,
-
-            'prior_joint_surgery' => $this->prior_joint_surgery === 'yes',
-            'implant_info'        => $this->implant_info ?: null,
-        ]);
-
-        // === file storage (your existing logic) ===
-        $base = "referrals/intakes/{$intake->id}";
-        $xrayMeta = [];
-        foreach ($this->xrays ?? [] as $file) {
-            $ext  = $file->getClientOriginalExtension();
-            $name = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-            $slug = \Illuminate\Support\Str::slug(substr($name, 0, 100));
-            $storedPath = $file->storeAs("$base/xrays", "{$slug}-".\Illuminate\Support\Str::random(8).".$ext", 'public');
-
-            $xrayMeta[] = [
-                'path'       => $storedPath,
-                'url'        => asset("storage/$storedPath"),
-                'original'   => $file->getClientOriginalName(),
-                'mime'       => $file->getMimeType(),
-                'size_bytes' => $file->getSize(),
-            ];
-        }
-
-        $surgeryPath = null;
-        if ($this->prior_joint_surgery === 'yes' && $this->surgery_report) {
-            $ext  = $this->surgery_report->getClientOriginalExtension();
-            $name = pathinfo($this->surgery_report->getClientOriginalName(), PATHINFO_FILENAME);
-            $slug = \Illuminate\Support\Str::slug(substr($name, 0, 100));
-            $surgeryPath = $this->surgery_report->storeAs("$base/surgery", "{$slug}-".\Illuminate\Support\Str::random(8).".$ext", 'public');
-        }
-
-        $intake->update([
-            'xray_files'          => $xrayMeta,
-            'surgery_report_path' => $surgeryPath,
-        ]);
-    });
-
-    $this->submitted = true;
-    $this->step = $this->totalSteps;
-}
-
-
-
 
     public function render()
     {
