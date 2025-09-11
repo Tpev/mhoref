@@ -113,12 +113,13 @@
                     <div>
                         {{-- TallStack UI v2 select — options emitted as JSON to avoid null/undefined --}}
 
-					<x-ts-select.styled
-						label="Smoking Status"
-						placeholder="Select status"
-						wire:model.defer="smoking_status"
-						:options="$smokingOptions"
-					/>
+						<x-ts-select.styled
+							label="Smoking Status"
+							placeholder="Select status"
+							wire:model.defer="smoking_status"
+							:options="{{ \Illuminate\Support\Js::from($smokingOptions ?? []) }}"
+						/>
+
 
                         @error('smoking_status') <x-ts-error :message="$message" /> @enderror
                     </div>
