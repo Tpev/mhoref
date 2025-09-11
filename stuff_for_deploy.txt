@@ -1,0 +1,527 @@
+1. Server Preparation
+a. Update and Upgrade
+Start by connecting to your AWS Ubuntu 24 server via SSH and updating the system packages.
+
+bash
+Copier
+# Update package list and upgrade all packages
+sudo apt update && sudo apt upgrade -y
+b. Create a Deployment User
+For security reasons, it's recommended to create a non-root user for deployment.
+
+bash
+Copier
+# Create a new user named 'deployer'
+sudo adduser deployer
+pwd : poneyquivol
+# Grant 'deployer' sudo privileges
+sudo usermod -aG sudo deployer
+
+# Switch to the 'deployer' user
+su - deployer
+c. Configure Firewall
+Ensure that only necessary ports are open. Typically, ports 22 (SSH), 80 (HTTP), and 443 (HTTPS) are required.
+
+bash
+Copier
+# Allow OpenSSH
+sudo ufw allow OpenSSH
+
+# Allow Nginx Full (includes HTTP and HTTPS)
+sudo ufw allow 'Nginx Full'
+
+# Enable the firewall
+sudo ufw enable
+
+# Check the status
+sudo ufw status
+2. Install Required Software
+a. Install Nginx
+Nginx will serve as the web server for your Laravel application.
+
+bash
+Copier
+# Update package list
+sudo apt update
+
+# Install Nginx
+sudo apt install nginx -y
+
+# Start and enable Nginx
+sudo systemctl start nginx
+sudo systemctl enable nginx
+b. Install PHP 8.3 and Extensions
+Laravel 11 requires PHP 8.3. We'll add a PPA to get the latest PHP version.
+
+bash
+Copier
+# Install prerequisites
+sudo apt install -y software-properties-common
+
+# Add PHP PPA
+sudo add-apt-repository ppa:ondrej/php -y
+
+# Update package list
+sudo apt update
+
+# Install PHP 8.3 and necessary extensions
+sudo apt install -y php8.3 php8.3-fpm php8.3-mysql php8.3-xml php8.3-mbstring php8.3-curl php8.3-zip php8.3-gd php8.3-bcmath php8.3-tokenizer php8.3-cli php8.3-json php8.3-common php8.3-intl
+
+# Verify PHP installation
+php -v
+c. Install MySQL
+Install and secure MySQL, which Laravel will use as its database.
+
+bash
+Copier
+# Install MySQL Server
+sudo apt install mysql-server -y
+
+# Run the security script
+sudo mysql_secure_installation
+Note: Follow the prompts to set the root password and secure the installation.
+
+d. Install Composer
+Composer is essential for managing PHP dependencies.
+
+bash
+Copier
+# Download Composer installer
+cd ~
+curl -sS https://getcomposer.org/installer -o composer-setup.php
+
+# Verify the installer SHA-384
+HASH=$(curl -sS https://composer.github.io/installer.sig)
+php -r "if (hash_file('sha384', 'composer-setup.php') === '$HASH') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+
+# Install Composer globally
+sudo php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+
+# Remove the installer
+rm composer-setup.php
+
+# Verify Composer installation
+composer --version
+e. Install Node.js and NPM
+Node.js is required for building frontend assets.
+
+bash
+Copier
+# Install Node.js 18.x (recommended)
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+
+# Install Node.js and npm
+sudo apt install -y nodejs
+
+# Verify installations
+node -v
+npm -v
+f. Install Git
+Git is necessary to clone your repository.
+
+bash
+Copier
+# Install Git
+sudo apt install git -y
+
+# Verify Git installation
+git --version
+g. Install Supervisor
+Supervisor manages Laravel's queue workers.
+
+bash
+Copier
+# Install Supervisor
+sudo apt install supervisor -y
+
+# Start and enable Supervisor
+sudo systemctl start supervisor
+sudo systemctl enable supervisor
+3. Clone Your Git Repository
+a. Generate SSH Keys
+Generate an SSH key for the deployer user to authenticate with your Git repository.
+
+bash
+Copier
+# As 'deployer' user
+ssh-keygen -t rsa -b 4096 -C "deployer@hub.healthcare"
+
+# Press Enter to accept the default file location
+# Optionally, add a passphrase
+b. Add SSH Key to Git Repository
+Copy the Public Key:
+
+bash
+Copier
+cat ~/.ssh/id_rsa.pub
+Add to Git Platform:
+
+GitHub: Go to Settings > SSH and GPG keys > New SSH key
+GitLab: Go to Preferences > SSH Keys > Add SSH Key
+Bitbucket: Go to Personal settings > SSH keys > Add key
+Paste the copied key and save.
+
+c. Clone the Repository
+bash
+Copier
+# Navigate to the web root directory
+cd /var/www
+
+# Clone your repository (replace with your repository URL)
+git clone git@github.com:Tpev/hub-ref-stage.git hub-ref
+
+# Navigate to the application directory
+cd hub-ref
+
+# Install Composer dependencies
+composer install --optimize-autoloader --no-dev
+
+# Install Node.js dependencies
+npm install
+
+# Build assets for production
+npm run build  # or 'npm run prod' depending on your package.json scripts
+Note: Ensure your Git repository uses SSH URLs (git@github.com:...) to utilize the SSH keys for authentication.
+
+4. Configure Environment Variables
+a. Create the .env File
+bash
+Copier
+# Navigate to your application directory
+cd /var/www/hub-ref
+
+# Copy the example environment file
+cp .env.example .env
+b. Update .env for Staging
+Edit the .env file to configure environment-specific settings.
+
+bash
+Copier
+nano .env
+Key Variables to Update:
+
+env
+Copier
+APP_NAME=Hub Healthcare
+APP_ENV=staging
+APP_KEY= # Leave empty; we'll generate it
+APP_DEBUG=true
+APP_URL=https://demo-mhg.hub.healthcare
+
+# Database Configuration
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=mhgdemo
+DB_USERNAME=deployer
+DB_PASSWORD=ppestderetour
+
+# Cache & Session
+CACHE_DRIVER=file
+SESSION_DRIVER=file
+
+# Queue
+QUEUE_CONNECTION=database
+
+# Filesystem
+FILESYSTEM_DRIVER=public
+
+# Other configurations as needed
+Save and exit the editor (Ctrl + X, then Y, and Enter).
+
+c. Generate Application Key
+bash
+Copier
+# Generate the Laravel application key
+php artisan key:generate
+5. Set Up the Database
+a. Create Database and User
+Log into MySQL to create the necessary database and user.
+
+bash
+Copier
+# Log into MySQL as root
+sudo mysql -u root -p
+Inside the MySQL Shell:
+
+sql
+Copier
+-- Create the database
+CREATE DATABASE mhgdemo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Create the user and grant privileges
+CREATE USER 'deployer'@'localhost' IDENTIFIED BY 'ppestderetour';
+GRANT ALL PRIVILEGES ON mhgdemo.* TO 'deployer'@'localhost';
+FLUSH PRIVILEGES;
+
+-- Exit MySQL
+EXIT;
+b. Run Migrations and Seeders
+bash
+Copier
+# Navigate to your application directory
+cd /var/www/hub-ref
+
+# Run migrations
+php artisan migrate --force
+
+# (Optional) Run seeders if you have them
+php artisan db:seed --force
+6. Install Dependencies and Build Assets
+If you haven't already installed dependencies and built assets during cloning, execute the following:
+
+bash
+Copier
+# Navigate to your application directory
+cd /var/www/hub-ref
+
+# Install Composer dependencies
+composer install --optimize-autoloader --no-dev
+
+# Install Node.js dependencies
+npm install
+
+# Build assets for production
+npm run build  # or 'npm run prod' depending on your package.json scripts
+7. Configure File Permissions
+Proper file permissions are crucial for security and functionality.
+
+bash
+Copier
+# Navigate to your application directory
+cd /var/www/hub-ref
+
+# Set ownership to 'deployer' and 'www-data' (Nginx user)
+sudo chown -R deployer:www-data /var/www/hub-ref
+
+# Set directory permissions
+sudo find /var/www/hub-ref -type d -exec chmod 755 {} \;
+
+# Set file permissions
+sudo find /var/www/hub-ref -type f -exec chmod 644 {} \;
+
+# Give write permissions to storage and bootstrap/cache
+sudo chgrp -R www-data storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
+8. Configure Nginx
+a. Create an Nginx Server Block
+Create a new Nginx configuration file for your Laravel application.
+
+bash
+Copier
+# Create a new server block file
+sudo nano /etc/nginx/sites-available/hub-ref
+Insert the Following Configuration:
+
+nginx
+Copier
+server {
+    listen 80;
+    server_name demo-mhg.hub.healthcare;
+
+    root /var/www/hub-ref/public;
+    index index.php index.html index.htm;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+
+    charset utf-8;
+
+    # Handle requests
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # Deny access to .env and other sensitive files
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+
+    # Pass PHP scripts to PHP-FPM
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    # Static files caching
+    location ~* \.(jpg|jpeg|png|gif|ico)$ {
+        expires 30d;
+        access_log off;
+    }
+
+    # Gzip Compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+}
+Save and Exit (Ctrl + X, then Y, and Enter).
+
+b. Enable the Server Block
+bash
+Copier
+# Create a symbolic link to enable the site
+sudo ln -s /etc/nginx/sites-available/hub-ref /etc/nginx/sites-enabled/
+
+# Test Nginx configuration
+sudo nginx -t
+
+# Reload Nginx to apply changes
+sudo systemctl reload nginx
+9. Set Up SSL with Let's Encrypt
+Securing your application with SSL is highly recommended.
+
+a. Install Certbot
+bash
+Copier
+# Install Certbot and the Nginx plugin
+sudo apt install certbot python3-certbot-nginx -y
+b. Obtain and Install SSL Certificate
+bash
+Copier
+# Run Certbot to obtain and install the certificate
+sudo certbot --nginx -d demo-mhg.hub.healthcare
+Follow the Prompts:
+
+Enter your email address.
+Agree to the terms of service.
+Choose whether to redirect HTTP traffic to HTTPS.
+c. Automate Certificate Renewal
+Certbot automatically sets up a cron job for renewal. To test the renewal process:
+
+bash
+Copier
+sudo certbot renew --dry-run
+10. Configure Supervisor for Queue Workers
+If your Laravel application uses queues, Supervisor ensures that queue workers run continuously.
+
+a. Create a Supervisor Configuration File
+bash
+Copier
+# Create a new Supervisor config file
+sudo nano /etc/supervisor/conf.d/hub-ref-worker.conf
+Insert the Following Configuration:
+
+ini
+Copier
+[program:hub-ref-worker]
+process_name=%(program_name)s_%(process_num)02d
+command=/usr/bin/php /var/www/hub-ref/artisan queue:work --sleep=3 --tries=3 --daemon
+autostart=true
+autorestart=true
+user=deployer
+numprocs=3
+redirect_stderr=true
+stdout_logfile=/var/www/hub-ref/storage/logs/worker.log
+Save and Exit (Ctrl + X, then Y, and Enter).
+
+b. Update Supervisor and Start Workers
+bash
+Copier
+# Update Supervisor to recognize the new config
+sudo supervisorctl reread
+sudo supervisorctl update
+
+# Check the status of the workers
+sudo supervisorctl status hub-ref-worker:*
+Expected Output:
+
+bash
+Copier
+hub-ref-worker:hub-ref-worker_00   RUNNING   pid 12345, uptime 0:00:10
+hub-ref-worker:hub-ref-worker_01   RUNNING   pid 12346, uptime 0:00:10
+hub-ref-worker:hub-ref-worker_02   RUNNING   pid 12347, uptime 0:00:10
+11. Set Up Cron Jobs for Laravel Scheduler
+Laravel's task scheduler requires a cron job to execute scheduled tasks.
+
+bash
+Copier
+# Open the crontab editor
+crontab -e
+Add the Following Line:
+
+cron
+Copier
+* * * * * cd /var/www/hub-ref && php artisan schedule:run >> /dev/null 2>&1
+Save and Exit (Ctrl + X, then Y, and Enter).
+
+12. Optimize Laravel for Production
+Optimizing your Laravel application enhances performance.
+
+bash
+Copier
+# Navigate to your application directory
+cd /var/www/hub-ref
+
+# Optimize configuration
+php artisan config:cache
+
+# Optimize routes
+php artisan route:cache
+
+# Optimize views
+php artisan view:cache
+Note: If you encounter errors with route:cache, ensure that your routes are compatible (e.g., no closures).
+
+13. Deploying Updates to the Staging Server
+When you push updates to your Git repository, follow these steps to deploy them to the staging server.
+
+a. SSH into the Staging Server
+bash
+Copier
+ssh deployer@your_server_ip
+b. Navigate to the Application Directory
+bash
+Copier
+cd /var/www/hub-ref
+c. Pull the Latest Changes
+bash
+Copier
+git pull origin main  # Replace 'main' with your branch name if different
+d. Install Dependencies and Build Assets
+bash
+Copier
+# Install Composer dependencies
+composer install --optimize-autoloader --no-dev
+
+# Install Node.js dependencies
+npm install
+
+# Build assets for production
+npm run build  # or 'npm run prod' depending on your package.json scripts
+e. Run Migrations and Seeders
+bash
+Copier
+php artisan migrate --force
+
+# (Optional) Run seeders
+php artisan db:seed --force
+f. Optimize Laravel Configurations
+bash
+Copier
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+g. Restart Queue Workers
+bash
+Copier
+sudo supervisorctl restart hub-ref-worker:*
+h. Clear and Rebuild Caches (Optional)
+bash
+Copier
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+
+
+### FIX SH*T
+
+# Set the correct owner (replace www-data with your web server user if different)
+sudo chown -R www-data:www-data storage bootstrap/cache
+
+# Set correct permissions
+sudo find storage -type d -exec chmod 775 {} \;
+sudo find storage -type f -exec chmod 664 {} \;
+sudo find bootstrap/cache -type d -exec chmod 775 {} \;
+sudo find bootstrap/cache -type f -exec chmod 664 {} \;
