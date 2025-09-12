@@ -10,18 +10,7 @@
                 </div>
                 <div class="uppercase text-xs tracking-wide">Referrals in Progress</div>
             </div>
-            <div>
-                <div class="text-4xl font-extrabold">
-                    {{ $dischargeToday }}
-                </div>
-                <div class="uppercase text-xs tracking-wide">Discharge Today</div>
-            </div>
-            <div>
-                <div class="text-4xl font-extrabold">
-                    {{ $dischargeTomorrow }}
-                </div>
-                <div class="uppercase text-xs tracking-wide">Discharge Tomorrow</div>
-            </div>
+
         </div>
     </section>
 
@@ -63,7 +52,7 @@
 
             <!-- Upcoming Discharges -->
             <div class="bg-white shadow rounded-lg overflow-hidden">
-                <h3 class="p-5 text-xl font-semibold border-b">Upcoming Discharges</h3>
+                <h3 class="p-5 text-xl font-semibold border-b">Upcoming Referral</h3>
                 <table class="min-w-full">
                     <thead class="bg-green-100 text-left text-xs uppercase tracking-wide">
                         <tr>
@@ -90,7 +79,7 @@
                         @empty
                             <tr>
                                 <td colspan="4" class="px-4 py-2 text-center text-gray-500 italic">
-                                    No upcoming discharges.
+                                    No upcoming Referral.
                                 </td>
                             </tr>
                         @endforelse
@@ -165,7 +154,7 @@
             wire:click="viewAllDischarges"
             class="block w-full bg-gray-100 rounded py-2 px-4 text-center hover:bg-gray-200 transition"
         >
-            View All Discharges
+            View All Referral
         </button>
     </div>
 </div>
