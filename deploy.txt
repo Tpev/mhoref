@@ -5,3 +5,5 @@ sudo -u www-data bash -lc "cd /var/www/mhoref && php artisan migrate --force"
 sudo -u www-data bash -lc "cd /var/www/mhoref && npm ci && npm run build"
 sudo -u www-data bash -lc "cd /var/www/mhoref && php artisan optimize && php artisan queue:restart"
 sudo systemctl reload nginx
+sudo -u www-data bash -lc "cd /var/www/mhoref && php artisan optimize:clear && php artisan view:clear && php artisan config:clear"
+sudo systemctl restart php8.3-fpm
