@@ -41,21 +41,21 @@ class UserSeeder extends Seeder
                 'password' => Hash::make('charles.petrini.poli.demo!'),
                 'group'    => $commonGroups,
             ],
-            // 3) Liz Arcaro
+
             [
                 'email'    => 'Julie.Evans@mainehealth.org',
                 'name'     => 'Julie Evans',
                 'password' => Hash::make('Julie.Evans.demo!'),
                 'group'    => $commonGroups,
             ],
-            // 4) Susan Whitney
+    
             [
                 'email'    => 'Sophia.Bazzini@mainehealth.org',
                 'name'     => 'Sophia Bazzini',
                 'password' => Hash::make('Sophia.Bazzini.demo!'),
                 'group'    => $commonGroups,
             ],
-            // 5) E Brondolo
+    
             [
                 'email'    => 'Christopher.sawyer@mainehealth.org',
                 'name'     => 'Christopher sawyer',
@@ -69,21 +69,21 @@ class UserSeeder extends Seeder
                 'password' => Hash::make('t.peverelli.demo!'),
                 'group'    => $commonGroups,
             ],
-            // 7) David Polisner
+
             [
-                'email'    => 'David.Polisner@mainehealth.org',
-                'name'     => 'David Polisner',
-                'password' => Hash::make('david.polisner.demo!'),
+                'email'    => 'Brian.Roux@mainehealth.org',
+                'name'     => 'Brian Roux',
+                'password' => Hash::make('Brian.Roux.demo!'),
                 'group'    => $commonGroups,
             ],
-            // 8) Amanda Roberts
+
             [
-                'email'    => 'Amanda.Roberts4@mainehealth.org',
+                'email'    => 'Bethany.fulton@mainehealth.org',
                 'name'     => 'Amanda Roberts',
-                'password' => Hash::make('amanda.roberts.demo!'),
+                'password' => Hash::make('Bethany.fulton.demo!'),
                 'group'    => $commonGroups,
             ],
-            // 9) Ashley Anderson
+
             [
                 'email'    => 'Ashley.Anderson@mainehealth.org',
                 'name'     => 'Ashley Anderson',
