@@ -79,7 +79,7 @@ class UserSeeder extends Seeder
 
             [
                 'email'    => 'Bethany.fulton@mainehealth.org',
-                'name'     => 'Amanda Roberts',
+                'name'     => 'Bethany fulton',
                 'password' => Hash::make('Bethany.fulton.demo!'),
                 'group'    => $commonGroups,
             ],
